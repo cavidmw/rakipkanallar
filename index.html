@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Rakip Kanal Sıralaması</title>
+
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <!-- Arka plan efektleri -->
+  <div class="bg">
+    <div class="bg__glow bg__glow--a"></div>
+    <div class="bg__glow bg__glow--b"></div>
+    <div class="bg__noise" aria-hidden="true"></div>
+  </div>
+
+  <main class="wrap">
+    <header class="topbar">
+      <div class="title">
+        <h1>Rakip Kanal Sıralaması</h1>
+        <p class="subtitle">Kanalları “alaka” seviyesine göre grupla, izleme ve düzenleme modları arasında geçiş yap.</p>
+      </div>
+
+      <div class="actions">
+        <button id="addOpenBtn" class="btn btn--primary" type="button" title="Kanal Ekle">
+          <span class="btn__icon">＋</span>
+          <span class="btn__text">Ekle</span>
+        </button>
+
+        <button id="editToggleBtn" class="btn btn--ghost" type="button" title="Düzenleme Modu">
+          <span class="btn__icon">✎</span>
+          <span class="btn__text">Düzenle</span>
+        </button>
+
+        <div class="mode-pill" id="modePill" aria-live="polite">
+          <span class="dot"></span>
+          <span class="mode-text">İzleme modu</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Kümeler -->
+    <section class="clusters" aria-label="Alaka Kümeleri">
+      <button class="cluster cluster--green is-active" data-cluster="green" type="button">
+        <div class="cluster__badge">EN ALAKALI</div>
+        <div class="cluster__meta">
+          <span class="cluster__count" id="countGreen">0</span>
+          <span class="cluster__label">kanal</span>
+        </div>
+        <div class="cluster__chev">›</div>
+      </button>
+
+      <button class="cluster cluster--yellow" data-cluster="yellow" type="button">
+        <div class="cluster__badge">ORTA ALAKALI</div>
+        <div class="cluster__meta">
+          <span class="cluster__count" id="countYellow">0</span>
+          <span class="cluster__label">kanal</span>
+        </div>
+        <div class="cluster__chev">›</div>
+      </button>
+
+      <button class="cluster cluster--red" data-cluster="red" type="button">
+        <div class="cluster__badge">AZ ALAKALI</div>
+        <div class="cluster__meta">
+          <span class="cluster__count" id="countRed">0</span>
+          <span class="cluster__label">kanal</span>
+        </div>
+        <div class="cluster__chev">›</div>
+      </button>
+    </section>
+
+    <!-- Panel (seçilen kümeye göre açılır) -->
+    <section class="panel" id="panel" aria-label="Kanal Listesi">
+      <div class="panel__head">
+        <div class="panel__title">
+          <span class="panel__chip" id="activeChip">EN ALAKALI</span>
+          <span class="panel__hint" id="panelHint">Bu kümedeki kanallar burada listelenir.</span>
+        </div>
+
+        <div class="panel__tools">
+          <button id="collapseBtn" class="btn btn--ghost btn--sm" type="button" title="Kapat">
+            <span class="btn__icon">×</span>
+          </button>
+        </div>
+      </div>
+
+      <ol class="list" id="channelList" aria-label="Kanal Öğeleri">
+        <!-- JS ile dolacak -->
+      </ol>
+
+      <div class="empty" id="emptyState">
+        <div class="empty__icon">📌</div>
+        <div class="empty__text">
+          <b>Bu kümede kanal yok.</b>
+          <span>Ekle butonundan kanal linki girip alaka rengini seç.</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Kanal ekleme modalı -->
+  <div class="modal-backdrop" id="modalBackdrop" hidden style="display:none;"></div>
+
+<div class="modal" id="addModal" role="dialog" aria-modal="true"
+     aria-labelledby="addModalTitle" hidden style="display:none;">
+
+    <div class="modal__card">
+      <div class="modal__head">
+        <h2 id="addModalTitle">Kanal Ekle</h2>
+        <button class="icon-btn" id="addCloseBtn" type="button" aria-label="Kapat">×</button>
+      </div>
+
+      <div class="modal__body">
+        <label class="field">
+          <span class="field__label">YouTube Kanal Linki</span>
+          <input id="channelLink" class="inpu   t" type="text" placeholder="Örn: https://www.youtube.com/@kanaladi" autocomplete="off"/>
+          <span class="field__help">channel/… veya @handle linkleri olur.</span>
+        </label>
+
+        <div class="row">
+          <label class="field">
+            <span class="field__label">Alaka Rengi</span>
+            <div class="segmented" role="radiogroup" aria-label="Alaka Rengi">
+              <input type="radio" name="colorPick" id="pickGreen" value="green" checked />
+              <label for="pickGreen" class="seg segmented--green">Yeşil</label>
+
+              <input type="radio" name="colorPick" id="pickYellow" value="yellow" />
+              <label for="pickYellow" class="seg segmented--yellow">Sarı</label>
+
+              <input type="radio" name="colorPick" id="pickRed" value="red" />
+              <label for="pickRed" class="seg segmented--red">Kırmızı</label>
+            </div>
+            <span class="field__help">Kırmızı ekranı boğmasın diye listede “kırmızı hissi” daha soft verilecek.</span>
+          </label>
+        </div>
+
+        <label class="field">
+          <span class="field__label">Açıklama (opsiyonel)</span>
+          <textarea id="channelDesc" class="textarea" rows="3" placeholder="Kısa not… (zorunlu değil)"></textarea>
+        </label>
+      </div>
+
+      <div class="modal__foot">
+        <button class="btn btn--ghost" id="cancelAddBtn" type="button">Vazgeç</button>
+        <button class="btn btn--primary" id="saveAddBtn" type="button">
+          Kaydet
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Template: liste elemanı -->
+  <template id="channelItemTpl">
+    <li class="item" draggable="false">
+      <div class="item__bg"></div>
+
+      <div class="item__left">
+        <div class="item__num">1</div>
+        <img class="item__logo" alt="Kanal logosu" />
+      </div>
+
+      <div class="item__info">
+        <a class="item__name" href="#" target="_blank" rel="noopener">Kanal Adı</a>
+        <div class="item__meta">
+          <span class="item__subs">0 abone</span>
+          <span class="dot-sep">•</span>
+          <span class="item__desc"></span>
+        </div>
+      </div>
+
+      <div class="item__right">
+        <!-- Sadece düzenleme modunda aktif olacak -->
+        <select class="item__select" aria-label="Renk değiştir">
+          <option value="green">Yeşil</option>
+          <option value="yellow">Sarı</option>
+          <option value="red">Kırmızı</option>
+        </select>
+
+        <button class="icon-btn item__del" type="button" title="Sil" aria-label="Sil">🗑</button>
+
+        <div class="drag-handle" title="Sürükle">
+          ⠿
+        </div>
+      </div>
+    </li>
+  </template>
+
+  <script type="module" src="./script.js"></script>
+</body>
+</html>
