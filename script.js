@@ -34,7 +34,6 @@ const firebaseConfig = {
   appId: "1:614904562607:web:f352a57fe3f4457077e55a"
 };
 
-// YouTube Data API key (same as you used)
 const YT_API_KEY = "AIzaSyCtw_vK-v4WFXqhoKLmimhFNHoQgJ6r48g";
 
 /* ---------- Init ---------- */
@@ -47,6 +46,7 @@ const addOpenBtn = document.getElementById("addOpenBtn");
 const editToggleBtn = document.getElementById("editToggleBtn");
 const modePill = document.getElementById("modePill");
 const collapseBtn = document.getElementById("collapseBtn");
+const openAllBtn = document.getElementById("openAllBtn");
 
 const clusters = document.querySelectorAll(".cluster");
 const panel = document.getElementById("panel");
@@ -88,18 +88,17 @@ let draggedId = null;
 /* ---------- Helpers ---------- */
 function setMode(newMode) {
   mode = newMode;
+
   document.body.classList.toggle("is-edit", mode === "edit");
   document.body.classList.toggle("is-view", mode !== "edit");
 
-  modePill.classList.toggle("is-edit", mode === "edit");
-  const modeText = modePill.querySelector(".mode-text");
-  modeText.textContent = mode === "edit" ? "Düzenleme modu" : "İzleme modu";
+  modePill?.classList.toggle("is-edit", mode === "edit");
+  const modeText = modePill?.querySelector(".mode-text");
+  if (modeText) modeText.textContent = mode === "edit" ? "Düzenleme modu" : "İzleme modu";
 
-  // Edit buton yazısı (küçük UX)
-  const txt = editToggleBtn.querySelector(".btn__text");
-  txt.textContent = mode === "edit" ? "Bitir" : "Düzenle";
+  const txt = editToggleBtn?.querySelector(".btn__text");
+  if (txt) txt.textContent = mode === "edit" ? "Bitir" : "Düzenle";
 
-  // Dragging only in edit
   refreshRender();
 }
 
@@ -109,9 +108,13 @@ function setActiveCluster(cluster) {
   clusters.forEach(btn => btn.classList.toggle("is-active", btn.dataset.cluster === cluster));
 
   activeChip.textContent = CLUSTER_LABEL[cluster] || "KÜME";
+
+  // openAllBtn label'ı güvenli güncelle
+  const openAllText = openAllBtn?.querySelector(".btn__text");
+  if (openAllText) openAllText.textContent = "Tümünü Aç";
+
   panelHint.textContent = "Bu kümedeki kanallar burada listelenir.";
 
-  // Panel görünür kalsın
   panel.classList.remove("is-collapsed");
   refreshRender();
 }
@@ -124,8 +127,7 @@ function openModal() {
   addModal.style.display = "grid";
 
   document.body.style.overflow = "hidden";
-
-  setTimeout(() => channelLinkEl.focus(), 0);
+  setTimeout(() => channelLinkEl?.focus(), 0);
 }
 
 function closeModal() {
@@ -162,7 +164,6 @@ function safeText(s, max = 160) {
   return t.length > max ? t.slice(0, max - 1) + "…" : t;
 }
 
-/* YouTube channel URL build */
 function youtubeChannelUrl(channelId) {
   return `https://www.youtube.com/channel/${encodeURIComponent(channelId)}`;
 }
@@ -171,11 +172,9 @@ function youtubeChannelUrl(channelId) {
 async function extractChannelId(url) {
   const u = String(url || "").trim();
 
-  // /channel/UCxxxx
   const channelMatch = u.match(/channel\/([A-Za-z0-9_-]{10,})/);
   if (channelMatch) return channelMatch[1];
 
-  // /@handle
   const handleMatch = u.match(/\/@([A-Za-z0-9._-]+)/);
   if (handleMatch) {
     const handle = handleMatch[1];
@@ -189,7 +188,6 @@ async function extractChannelId(url) {
     }
   }
 
-  // custom URLs might not be resolvable reliably with this method
   return null;
 }
 
@@ -198,6 +196,7 @@ async function fetchChannelData(channelId) {
     `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${encodeURIComponent(channelId)}&key=${YT_API_KEY}`
   );
   if (!res.ok) throw new Error("YouTube API hatası");
+
   const json = await res.json();
   const ch = json?.items?.[0];
   if (!ch) throw new Error("Kanal bulunamadı");
@@ -218,15 +217,6 @@ async function fetchChannelData(channelId) {
     subs
   };
 }
-
-/* ---------- Firestore model ----------
-   doc fields:
-   - channelId, name, logo, subs
-   - color: green|yellow|red  (required)
-   - desc: string (optional)
-   - order: number  (ordering inside color group)
-   - createdAt: serverTimestamp
------------------------------------------------- */
 
 /* ---------- Add channel ---------- */
 async function addChannelFlow() {
@@ -252,14 +242,12 @@ async function addChannelFlow() {
 
     const data = await fetchChannelData(channelId);
 
-    // prevent duplicates by channelId (soft check: client side)
     const exists = allDocs.some(d => d.data?.channelId === channelId);
     if (exists) {
       alert("Bu kanal zaten ekli görünüyor.");
       return;
     }
 
-    // order: place to end of its color group
     const maxOrder = getMaxOrderForColor(color);
     const order = maxOrder + 1;
 
@@ -272,7 +260,7 @@ async function addChannelFlow() {
     });
 
     closeModal();
-    setMode("view"); // kaydet sonrası izleme moduna geç
+    setMode("view");
   } catch (err) {
     console.error(err);
     alert("Kanal eklenemedi. Linki kontrol et veya API anahtarını kontrol et.");
@@ -311,11 +299,8 @@ function getActiveListSorted() {
 }
 
 function refreshEmptyState(itemsLen) {
-  if (itemsLen === 0) {
-    emptyState.classList.add("is-show");
-  } else {
-    emptyState.classList.remove("is-show");
-  }
+  if (itemsLen === 0) emptyState.classList.add("is-show");
+  else emptyState.classList.remove("is-show");
 }
 
 function makeItemElement(docObj, index) {
@@ -324,7 +309,7 @@ function makeItemElement(docObj, index) {
 
   node.dataset.id = id;
   node.dataset.color = data.color || "green";
-  node.draggable = mode === "edit";
+  node.draggable = false; // drag handle üzerinden yapacağız
 
   const numEl = node.querySelector(".item__num");
   const logoEl = node.querySelector(".item__logo");
@@ -354,34 +339,30 @@ function makeItemElement(docObj, index) {
     descEl.style.display = "none";
   }
 
-  // select
   selectEl.value = data.color || "green";
   selectEl.disabled = mode !== "edit";
-
-  // delete
   delBtn.disabled = mode !== "edit";
 
-  // hide drag handle in view handled by css, but keep pointer blocked anyway
-  dragHandle.style.pointerEvents = mode === "edit" ? "auto" : "none";
+  // drag handle aktifliği
+  if (dragHandle) {
+    dragHandle.style.pointerEvents = mode === "edit" ? "auto" : "none";
+    dragHandle.draggable = mode === "edit";
+  }
 
-  // change color (moves to cluster)
   selectEl.addEventListener("change", async (e) => {
     if (mode !== "edit") return;
     const newColor = e.target.value;
     if (!["green", "yellow", "red"].includes(newColor)) return;
 
     try {
-      // put at end of new cluster
       const maxOrder = getMaxOrderForColor(newColor);
       await updateDoc(doc(db, "channels", id), { color: newColor, order: maxOrder + 1 });
-      // if moved out of active cluster, UI will update via snapshot
     } catch (err) {
       console.error(err);
       alert("Renk değiştirilemedi.");
     }
   });
 
-  // delete
   delBtn.addEventListener("click", async () => {
     if (mode !== "edit") return;
     const ok = confirm("Bu kanalı silmek istiyor musun?");
@@ -394,36 +375,51 @@ function makeItemElement(docObj, index) {
     }
   });
 
-  // drag reorder (only within active cluster)
   addDragEvents(node, dragHandle);
-
   return node;
 }
 
+/* ✅ EKSİK OLAN FONKSİYON: refreshRender */
 function refreshRender() {
   refreshCounts();
 
   const items = getActiveListSorted();
   channelList.innerHTML = "";
-
-  items.forEach((d, idx) => {
-    channelList.appendChild(makeItemElement(d, idx));
-  });
+  items.forEach((d, idx) => channelList.appendChild(makeItemElement(d, idx)));
 
   refreshEmptyState(items.length);
 }
 
-/* ---------- Drag & Drop reorder ---------- */
-function addDragEvents(li, handle) {
-  // Only in edit mode
-  li.addEventListener("dragstart", (e) => {
-    if (mode !== "edit") {
-      e.preventDefault();
+/* ---------- Tümünü Aç ---------- */
+function openAllInActiveCluster() {
+  const items = getActiveListSorted();
+  if (items.length === 0) {
+    alert("Bu kümede açılacak kanal yok.");
+    return;
+  }
+
+  // tarayıcı popup engeli yememek için: önce onay
+  const ok = confirm(`${items.length} kanal sekmesi açılacak. Devam?`);
+  if (!ok) return;
+
+  let i = 0;
+  const timer = setInterval(() => {
+    if (i >= items.length) {
+      clearInterval(timer);
       return;
     }
-    // We want drag only when handle is used
-    // If user drags elsewhere, block
-    if (e.target !== handle) {
+    const channelId = items[i].data.channelId;
+    window.open(youtubeChannelUrl(channelId), "_blank", "noopener");
+    i++;
+  }, 250);
+}
+
+/* ---------- Drag & Drop reorder (stabil) ---------- */
+function addDragEvents(li, handle) {
+  if (!handle) return;
+
+  handle.addEventListener("dragstart", (e) => {
+    if (mode !== "edit") {
       e.preventDefault();
       return;
     }
@@ -433,7 +429,7 @@ function addDragEvents(li, handle) {
     try { e.dataTransfer.setData("text/plain", draggedId); } catch {}
   });
 
-  li.addEventListener("dragend", () => {
+  handle.addEventListener("dragend", () => {
     li.classList.remove("is-dragging");
     draggedId = null;
   });
@@ -449,47 +445,29 @@ function addDragEvents(li, handle) {
     e.preventDefault();
 
     const targetId = li.dataset.id;
-    const fromId = draggedId || (()=>{
+    const fromId = draggedId || (() => {
       try { return e.dataTransfer.getData("text/plain"); } catch { return null; }
     })();
 
     if (!fromId || fromId === targetId) return;
 
-    // Reorder within active cluster only
-    const items = getActiveListSorted(); // sorted array of doc objects
+    const items = getActiveListSorted();
     const ids = items.map(x => x.id);
 
     const fromIndex = ids.indexOf(fromId);
     const toIndex = ids.indexOf(targetId);
     if (fromIndex === -1 || toIndex === -1) return;
 
-    // Move in array
     ids.splice(toIndex, 0, ids.splice(fromIndex, 1)[0]);
 
-    // Update orders sequentially
-    // To reduce writes, only update changed indexes
-    const updates = [];
-    for (let i = 0; i < ids.length; i++) {
-      const id = ids[i];
-      const docObj = items.find(x => x.id === id);
-      const currentOrder = Number(docObj?.data?.order ?? 0);
-      if (currentOrder !== i) {
-        updates.push(updateDoc(doc(db, "channels", id), { order: i }));
-      }
-    }
-
     try {
+      // hepsini setlemek en stabil (az kanal var zaten)
+      const updates = ids.map((id, i) => updateDoc(doc(db, "channels", id), { order: i }));
       await Promise.all(updates);
     } catch (err) {
       console.error(err);
       alert("Sıralama kaydedilemedi.");
     }
-  });
-
-  // Make handle the only draggable start point
-  // This improves UX: user can still click name etc.
-  handle.addEventListener("mousedown", () => {
-    // no-op: just exists so user feels it's the handle
   });
 }
 
@@ -500,17 +478,15 @@ function collapsePanel() {
 }
 
 /* ---------- Events ---------- */
-addOpenBtn.addEventListener("click", () => {
-  openModal();
-});
+addOpenBtn.addEventListener("click", openModal);
 
 editToggleBtn.addEventListener("click", () => {
   setMode(mode === "edit" ? "view" : "edit");
 });
 
-collapseBtn.addEventListener("click", () => {
-  collapsePanel();
-});
+openAllBtn.addEventListener("click", openAllInActiveCluster);
+
+collapseBtn.addEventListener("click", collapsePanel);
 
 clusters.forEach(btn => {
   btn.addEventListener("click", () => setActiveCluster(btn.dataset.cluster));
@@ -533,12 +509,8 @@ const q = query(channelsRef, orderBy("order"));
 onSnapshot(
   q,
   (snapshot) => {
-    allDocs = snapshot.docs.map(d => ({
-      id: d.id,
-      data: d.data()
-    }));
+    allDocs = snapshot.docs.map(d => ({ id: d.id, data: d.data() }));
 
-    // Güvenlik: eksik alanları normalize et
     for (const d of allDocs) {
       if (!["green", "yellow", "red"].includes(d.data.color)) d.data.color = "green";
       if (typeof d.data.order !== "number") d.data.order = 0;
@@ -554,18 +526,7 @@ onSnapshot(
   }
 );
 
-  // Normalize missing fields (safety)
-  for (const d of allDocs) {
-    if (!["green", "yellow", "red"].includes(d.data.color)) d.data.color = "green";
-    if (typeof d.data.order !== "number") d.data.order = 0;
-  }
-
-  refreshRender();
-;
-
 /* ---------- Init defaults ---------- */
 setMode("view");
 setActiveCluster("green");
-closeModal(); // ensure hidden state (in case)
-
 closeModal();
