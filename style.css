@@ -427,6 +427,18 @@ body {
   color: var(--muted);
 }
 
+/* Panel tools yan yana dursun, taşmasın */
+.panel__tools{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+/* Tümünü Aç butonu text taşmasın */
+#openAllBtn{
+  white-space: nowrap;
+}
+
 /* ---- List ---- */
 .list{
   list-style: none;
@@ -457,7 +469,6 @@ body {
   box-shadow: 0 18px 36px rgba(0,0,0,0.48);
 }
 
-/* bright strip background like your sample (behind) */
 .item__bg{
   position: absolute;
   inset: 0;
@@ -623,7 +634,7 @@ body {
   transform: scale(0.99);
 }
 
-/* ---- Color backgrounds for items (bright like your sample) ---- */
+/* ---- Color backgrounds for items ---- */
 .item[data-color="green"] .item__bg{
   background: linear-gradient(135deg, rgba(0,255,136,0.95), rgba(0,204,102,0.95));
   box-shadow: 0 0 0 1px rgba(0,255,136,0.20), 0 0 22px rgba(0,255,136,0.22);
@@ -633,12 +644,10 @@ body {
   box-shadow: 0 0 0 1px rgba(255,238,0,0.18), 0 0 22px rgba(255,238,0,0.20);
 }
 .item[data-color="red"] .item__bg{
-  /* not a giant flat red — ruby/magenta blend */
   background: linear-gradient(135deg, rgba(255,77,109,0.92), rgba(181,23,158,0.90));
   box-shadow: 0 0 0 1px rgba(255,77,109,0.16), 0 0 22px rgba(255,77,109,0.18);
 }
 
-/* Make sure text stays black on bright background */
 .item[data-color="green"] .item__name,
 .item[data-color="yellow"] .item__name,
 .item[data-color="red"] .item__name{
@@ -650,7 +659,7 @@ body {
   color: rgba(0,0,0,0.80);
 }
 
-/* ---- Read mode vs Edit mode behavior ---- */
+/* ---- Read mode vs Edit mode ---- */
 body.is-view .item__select,
 body.is-view .item__del,
 body.is-view .drag-handle{
@@ -715,13 +724,13 @@ body.is-edit .item{
   color: var(--text);
 }
 
-/* ---- Modal ---- */
+/* ---- Modal (tek kaynak, cakismaz) ---- */
 .modal-backdrop{
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.55);
-  backdrop-filter: blur(6px);
-  z-index: 50;
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(8px);
+  z-index: 9998;
 }
 
 .modal{
@@ -729,7 +738,7 @@ body.is-edit .item{
   inset: 0;
   display: grid;
   place-items: center;
-  z-index: 60;
+  z-index: 9999;
   padding: 20px;
 }
 
@@ -854,22 +863,19 @@ body.is-edit .item{
   background: rgba(255,255,255,0.08);
 }
 
-/* Segmented renk temaları (minik glow + border tonu) */
+/* Segmented renk temaları */
 .segmented--green{
   border-color: rgba(0,255,136,0.18);
   box-shadow: 0 10px 28px rgba(0,255,136,0.08);
 }
-
 .segmented--yellow{
   border-color: rgba(255,238,0,0.16);
   box-shadow: 0 10px 28px rgba(255,238,0,0.06);
 }
-
 .segmented--red{
   border-color: rgba(255,77,109,0.16);
   box-shadow: 0 10px 28px rgba(255,77,109,0.07);
 }
-
 
 /* checked state */
 #pickGreen:checked + label{
@@ -934,18 +940,4 @@ body.is-edit .item{
   .item__desc{
     max-width: 100%;
   }
-}
-
-/* Modal kesin katman + daha şeffaf arka plan */
-.modal-backdrop{
-  background: rgba(0,0,0,0.35) !important; /* daha şeffaf */
-  backdrop-filter: blur(8px) !important;
-}
-
-.modal{
-  z-index: 9999 !important;
-}
-
-.modal-backdrop{
-  z-index: 9998 !important;
 }
