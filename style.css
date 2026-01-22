@@ -941,3 +941,35 @@ body.is-edit .item{
     max-width: 100%;
   }
 }
+
+/* ✅ Yeni site butonu (modern, büyük, göze çarpar) */
+.btn--portal{
+  color: rgba(255,255,255,0.95);
+  background: linear-gradient(135deg, rgba(120,60,255,0.95), rgba(0,240,255,0.55));
+  border: 1px solid rgba(255,255,255,0.14);
+  box-shadow: 0 14px 34px rgba(120,60,255,0.22);
+  padding: 12px 16px;
+  border-radius: 14px;
+}
+
+.btn--portal:hover{
+  border-color: rgba(255,255,255,0.22);
+  box-shadow: 0 18px 42px rgba(120,60,255,0.30);
+  transform: translateY(-1px);
+}
+
+.btn--portal:active{
+  transform: translateY(1px) scale(0.99);
+}
+
+/* küçük ekranlarda taşmayı azalt */
+@media (max-width: 560px){
+  .btn--portal .btn__text{
+    display:none; /* sadece ikon kalsın */
+  }
+  .btn--portal{
+    padding: 12px 14px;
+  }
+}
+
+
