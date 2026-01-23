@@ -1,214 +1,142 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Rakip Kanal Sıralaması</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Eyalet KML Üretici</title>
 
+  <!-- SEKME İKONU (favicon) -->
+  <link rel="icon" type="image/png" href="./favicon.jpg" />
+
+  <!-- CSS -->
   <link rel="stylesheet" href="./style.css" />
-  <link rel="icon" type="image/png" href="./favicon.jpg">
 </head>
 
 <body>
-  <!-- Arka plan efektleri -->
-  <div class="bg" aria-hidden="true">
-    <div class="bg__glow bg__glow--a"></div>
-    <div class="bg__glow bg__glow--b"></div>
-    <div class="bg__noise"></div>
-  </div>
-
-  <main class="wrap">
-    <header class="topbar">
-      <div class="title">
-        <h1>Rakip Kanal Sıralaması</h1>
-        <p class="subtitle">
-          Kanalları “alaka” seviyesine göre grupla, izleme ve düzenleme modları arasında geçiş yap.
-        </p>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <h1>Eyalet KML Üretici</h1>
+        <p class="sub">Eyalet seç → border / iç dolgu ayarla → KML indir → Earth Studio’da overlay olarak kullan.</p>
       </div>
 
-      <div class="actions">
-        <!-- ✅ YENİ: Diğer siteye yönlendiren büyük modern tuş -->
-        <a
-          id="goNewSiteBtn"
-          class="btn btn--portal"
-          href="https://cavidmw.github.io/kml/"
-          target="_blank"
-          rel="noopener"
-          title="Yeni siteyi aç"
-        >
-          <span class="btn__icon">↗</span>
-          <span class="btn__text">Yeni Site</span>
-        </a>
+      <div class="badge">⚡ KML • Border + (Opsiyonel) Dolgu</div>
+    </div>
 
-        <button id="addOpenBtn" class="btn btn--primary" type="button" title="Kanal Ekle">
-          <span class="btn__icon">＋</span>
-          <span class="btn__text">Ekle</span>
-        </button>
-
-        <button id="editToggleBtn" class="btn btn--ghost" type="button" title="Düzenleme Modu">
-          <span class="btn__icon">✎</span>
-          <span class="btn__text">Düzenle</span>
-        </button>
-
-        <div class="mode-pill" id="modePill" aria-live="polite">
-          <span class="dot"></span>
-          <span class="mode-text">İzleme modu</span>
-        </div>
-      </div>
-    </header>
-
-    <!-- Kümeler -->
-    <section class="clusters" aria-label="Alaka Kümeleri">
-      <button class="cluster cluster--green is-active" data-cluster="green" type="button">
-        <div class="cluster__badge">EN ALAKALI</div>
-        <div class="cluster__meta">
-          <span class="cluster__count" id="countGreen">0</span>
-          <span class="cluster__label">kanal</span>
-        </div>
-        <div class="cluster__chev">›</div>
-      </button>
-
-      <button class="cluster cluster--yellow" data-cluster="yellow" type="button">
-        <div class="cluster__badge">ORTA ALAKALI</div>
-        <div class="cluster__meta">
-          <span class="cluster__count" id="countYellow">0</span>
-          <span class="cluster__label">kanal</span>
-        </div>
-        <div class="cluster__chev">›</div>
-      </button>
-
-      <button class="cluster cluster--red" data-cluster="red" type="button">
-        <div class="cluster__badge">AZ ALAKALI</div>
-        <div class="cluster__meta">
-          <span class="cluster__count" id="countRed">0</span>
-          <span class="cluster__label">kanal</span>
-        </div>
-        <div class="cluster__chev">›</div>
-      </button>
-    </section>
-
-    <!-- Panel -->
-    <section class="panel" id="panel" aria-label="Kanal Listesi">
-      <div class="panel__head">
-        <div class="panel__title">
-          <span class="panel__chip" id="activeChip">EN ALAKALI</span>
-          <span class="panel__hint" id="panelHint">Bu kümedeki kanallar burada listelenir.</span>
-        </div>
-
-        <div class="panel__tools">
-          <button id="openAllBtn" class="btn btn--ghost btn--sm" type="button" title="Tümünü Aç">
-            <span class="btn__icon">↗</span>
-            <span class="btn__text">Tümünü Aç</span>
-          </button>
-
-          <button id="collapseBtn" class="btn btn--ghost btn--sm" type="button" title="Kapat">
-            <span class="btn__icon">×</span>
-          </button>
-        </div>
-      </div>
-
-      <ol class="list" id="channelList" aria-label="Kanal Öğeleri"></ol>
-
-      <div class="empty" id="emptyState">
-        <div class="empty__icon">📌</div>
-        <div class="empty__text">
-          <b>Bu kümede kanal yok.</b>
-          <span>Ekle butonundan kanal linki girip alaka rengini seç.</span>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <!-- Modal -->
-  <div class="modal-backdrop" id="modalBackdrop" hidden style="display:none;"></div>
-
-  <div class="modal" id="addModal" role="dialog" aria-modal="true" aria-labelledby="addModalTitle" hidden style="display:none;">
-    <div class="modal__card" role="document">
-      <div class="modal__head">
-        <h2 id="addModalTitle">Kanal Ekle</h2>
-        <button class="icon-btn" id="addCloseBtn" type="button" aria-label="Kapat">×</button>
-      </div>
-
-      <div class="modal__body">
-        <label class="field">
-          <span class="field__label">YouTube Kanal Linki</span>
-          <input
-            id="channelLink"
-            class="input"
-            type="text"
-            placeholder="Örn: https://www.youtube.com/@kanaladi"
-            autocomplete="off"
-          />
-          <span class="field__help">channel/… veya @handle linkleri olur.</span>
-        </label>
-
-        <label class="field">
-          <span class="field__label">Alaka Rengi</span>
-          <div class="segmented" role="radiogroup" aria-label="Alaka Rengi">
-            <input type="radio" name="colorPick" id="pickGreen" value="green" checked />
-            <label for="pickGreen" class="seg segmented--green">Yeşil</label>
-
-            <input type="radio" name="colorPick" id="pickYellow" value="yellow" />
-            <label for="pickYellow" class="seg segmented--yellow">Sarı</label>
-
-            <input type="radio" name="colorPick" id="pickRed" value="red" />
-            <label for="pickRed" class="seg segmented--red">Kırmızı</label>
+    <div class="card">
+      <div class="grid">
+        <!-- SOL: ayarlar + preview -->
+        <div>
+          <!-- BORDER -->
+          <div class="field">
+            <label>Border rengi</label>
+            <input id="color" type="color" value="#ffffff" />
           </div>
-          <span class="field__help">Kırmızı ekranı boğmasın diye listede “kırmızı hissi” daha soft verilecek.</span>
-        </label>
 
-        <label class="field">
-          <span class="field__label">Açıklama (opsiyonel)</span>
-          <textarea
-            id="channelDesc"
-            class="textarea"
-            rows="3"
-            placeholder="Kısa not… (zorunlu değil)"
-          ></textarea>
-        </label>
-      </div>
+          <div class="field" style="margin-top:12px;">
+            <label>Kalınlık</label>
+            <div class="rangeRow">
+              <input id="width" type="range" min="1" max="14" value="4" />
+              <div class="pill"><span id="widthVal">4</span> px</div>
+            </div>
+          </div>
 
-      <div class="modal__foot">
-        <button class="btn btn--ghost" id="cancelAddBtn" type="button">Vazgeç</button>
-        <button class="btn btn--primary" id="saveAddBtn" type="button">Kaydet</button>
+          <div class="field" style="margin-top:12px;">
+            <label>Border saydamlık</label>
+            <div class="rangeRow">
+              <input id="alpha" type="range" min="0" max="100" value="100" />
+              <div class="pill"><span id="alphaVal">100</span>%</div>
+            </div>
+          </div>
+
+          <!-- FILL TOGGLE -->
+          <div class="field" style="margin-top:14px;">
+            <label>İçi renklendir</label>
+            <div class="toggleRow">
+              <button id="fillToggle" class="btn secondary" type="button" aria-pressed="false">
+                Kapalı
+              </button>
+              <div class="smallNote" style="margin:0;">Açarsan eyaletin içi boyanır.</div>
+            </div>
+          </div>
+
+          <!-- FILL CONTROLS (başta kapalı) -->
+          <div id="fillControls" class="fillControls" style="display:none; margin-top:12px;">
+            <div class="field">
+              <label>İç renk</label>
+              <input id="fillColor" type="color" value="#22c55e" />
+            </div>
+
+            <div class="field" style="margin-top:12px;">
+              <label>İç saydamlık</label>
+              <div class="rangeRow">
+                <input id="fillAlpha" type="range" min="0" max="100" value="35" />
+                <div class="pill"><span id="fillAlphaVal">35</span>%</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Preview (kvadrat) -->
+          <div class="previewBox" style="margin-top:14px;">
+            <div class="previewTop">
+              <div class="previewTitle">Önizleme</div>
+              <div class="previewMeta">
+                <span id="previewText">Border: #ffffff • 4px • 100%</span>
+                <span id="previewFillText" style="margin-left:10px; opacity:.9;"></span>
+              </div>
+            </div>
+
+            <svg id="previewSvg" viewBox="0 0 300 90" width="100%" height="90" aria-label="preview">
+              <!-- arka panel -->
+              <rect x="8" y="10" width="284" height="70" rx="14" ry="14"
+                    fill="rgba(0,0,0,.18)" stroke="rgba(255,255,255,.08)"/>
+              <!-- örnek eyalet kutusu -->
+              <rect id="previewRect"
+                    x="60" y="26" width="180" height="38" rx="10" ry="10"
+                    fill="rgba(0,0,0,0)"
+                    stroke="#ffffff" stroke-width="4"
+                    stroke-opacity="1"
+                    />
+            </svg>
+          </div>
+
+          <div class="actions">
+            <button id="dl" class="btn" type="button">KML İndir</button>
+            <button id="reset" class="btn secondary" type="button">Sıfırla</button>
+          </div>
+
+          <div id="msg" class="hint"></div>
+          <div class="foot">Not: Alaska gibi eyaletler çok parçalıdır; listede tek satır görünmesi için optimize ettik.</div>
+        </div>
+
+        <!-- SAĞ: sadece eyalet seç -->
+        <div>
+          <div class="field">
+            <label>Eyalet seç</label>
+
+            <div class="combo" id="combo">
+              <button class="comboBtn" id="comboBtn" type="button">
+                <span id="stateInput">Yükleniyor…</span>
+                <span class="chev">▾</span>
+              </button>
+
+              <div class="comboMenu" id="comboMenu">
+                <input id="stateSearch" class="comboSearch" type="text" placeholder="Buradan filtrele…" />
+                <div class="comboList" id="stateList"></div>
+              </div>
+            </div>
+
+            <div class="smallNote">İpucu: Açılan menüde yukarıdaki kutudan aratabilirsin.</div>
+          </div>
+
+          <!-- JS bozulmasın diye gizli -->
+          <input id="q" type="hidden" value="" />
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Template -->
-  <template id="channelItemTpl">
-    <li class="item" draggable="false">
-      <div class="item__bg"></div>
-
-      <div class="item__left">
-        <div class="item__num">1</div>
-        <img class="item__logo" src="" alt="Kanal logosu" />
-      </div>
-
-      <div class="item__info">
-        <a class="item__name" href="#" target="_blank" rel="noopener">Kanal Adı</a>
-        <div class="item__meta">
-          <span class="item__subs">0 abone</span>
-          <span class="dot-sep">•</span>
-          <span class="item__desc"></span>
-        </div>
-      </div>
-
-      <div class="item__right">
-        <select class="item__select" aria-label="Renk değiştir">
-          <option value="green">Yeşil</option>
-          <option value="yellow">Sarı</option>
-          <option value="red">Kırmızı</option>
-        </select>
-
-        <button class="icon-btn item__del" type="button" title="Sil" aria-label="Sil">🗑</button>
-
-        <div class="drag-handle" title="Sürükle" aria-label="Sürükle">⠿</div>
-      </div>
-    </li>
-  </template>
-
-  <script type="module" src="./script.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+  <script src="./app.js"></script>
 </body>
 </html>
-
