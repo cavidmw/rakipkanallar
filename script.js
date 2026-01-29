@@ -309,7 +309,9 @@ function makeItemElement(docObj, index) {
 
   node.dataset.id = id;
   node.dataset.color = data.color || "green";
-  node.draggable = false; // drag handle üzerinden yapacağız
+
+  // Drag'ı handle üzerinden başlatacağız (li'yi draggable yapmıyoruz)
+  node.draggable = false;
 
   const numEl = node.querySelector(".item__num");
   const logoEl = node.querySelector(".item__logo");
@@ -318,64 +320,109 @@ function makeItemElement(docObj, index) {
   const descEl = node.querySelector(".item__desc");
   const selectEl = node.querySelector(".item__select");
   const delBtn = node.querySelector(".item__del");
+  const noteBtn = node.querySelector(".item__note");
   const dragHandle = node.querySelector(".drag-handle");
 
-  numEl.textContent = String(index + 1);
+  // num
+  if (numEl) numEl.textContent = String(index + 1);
 
-  logoEl.src = data.logo || "";
-  logoEl.alt = `${data.name || "Kanal"} logosu`;
-
-  nameEl.textContent = data.name || "Bilinmeyen Kanal";
-  nameEl.href = youtubeChannelUrl(data.channelId);
-
-  subsEl.textContent = formatSubs(data.subs);
-
-  const desc = safeText(data.desc, 120);
-  if (desc) {
-    descEl.textContent = desc;
-    descEl.style.display = "";
-  } else {
-    descEl.textContent = "";
-    descEl.style.display = "none";
+  // logo
+  if (logoEl) {
+    logoEl.src = data.logo || "";
+    logoEl.alt = `${data.name || "Kanal"} logosu`;
   }
 
-  selectEl.value = data.color || "green";
-  selectEl.disabled = mode !== "edit";
-  delBtn.disabled = mode !== "edit";
+  // name + link
+  if (nameEl) {
+    nameEl.textContent = data.name || "Bilinmeyen Kanal";
+    nameEl.href = youtubeChannelUrl(data.channelId);
+  }
 
-  // drag handle aktifliği
+  // subs
+  if (subsEl) subsEl.textContent = formatSubs(data.subs);
+
+  // desc render
+  const desc = safeText(data.desc, 120);
+  if (descEl) {
+    if (desc) {
+      descEl.textContent = desc;
+      descEl.style.display = "";
+    } else {
+      descEl.textContent = "";
+      descEl.style.display = "none";
+    }
+  }
+
+  // select state
+  if (selectEl) {
+    selectEl.value = data.color || "green";
+    selectEl.disabled = mode !== "edit";
+
+    selectEl.addEventListener("change", async (e) => {
+      if (mode !== "edit") return;
+
+      const newColor = e.target.value;
+      if (!["green", "yellow", "red"].includes(newColor)) return;
+
+      try {
+        const maxOrder = getMaxOrderForColor(newColor);
+        await updateDoc(doc(db, "channels", id), { color: newColor, order: maxOrder + 1 });
+      } catch (err) {
+        console.error(err);
+        alert("Renk değiştirilemedi.");
+      }
+    });
+  }
+
+  // delete
+  if (delBtn) {
+    delBtn.disabled = mode !== "edit";
+
+    delBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (mode !== "edit") return;
+      const ok = confirm("Bu kanalı silmek istiyor musun?");
+      if (!ok) return;
+
+      try {
+        await deleteDoc(doc(db, "channels", id));
+      } catch (err) {
+        console.error(err);
+        alert("Silinemedi.");
+      }
+    });
+  }
+
+  // NOTE EDIT (Kalem)
+  if (noteBtn) {
+    noteBtn.disabled = mode !== "edit";
+
+    noteBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (mode !== "edit") {
+        alert("Not düzenlemek için önce 'Düzenle' moduna geç.");
+        return;
+      }
+
+      showNoteEditor({ docId: id, currentText: data.desc || "" });
+    });
+  }
+
+  // drag handle: sadece edit modunda aktif
   if (dragHandle) {
     dragHandle.style.pointerEvents = mode === "edit" ? "auto" : "none";
-    dragHandle.draggable = mode === "edit";
+
+    // handle draggable olsun ki dragstart tetiklensin
+    dragHandle.setAttribute("draggable", mode === "edit" ? "true" : "false");
   }
 
-  selectEl.addEventListener("change", async (e) => {
-    if (mode !== "edit") return;
-    const newColor = e.target.value;
-    if (!["green", "yellow", "red"].includes(newColor)) return;
-
-    try {
-      const maxOrder = getMaxOrderForColor(newColor);
-      await updateDoc(doc(db, "channels", id), { color: newColor, order: maxOrder + 1 });
-    } catch (err) {
-      console.error(err);
-      alert("Renk değiştirilemedi.");
-    }
-  });
-
-  delBtn.addEventListener("click", async () => {
-    if (mode !== "edit") return;
-    const ok = confirm("Bu kanalı silmek istiyor musun?");
-    if (!ok) return;
-    try {
-      await deleteDoc(doc(db, "channels", id));
-    } catch (err) {
-      console.error(err);
-      alert("Silinemedi.");
-    }
-  });
-
+  // Drag & drop eventlerini bağla (senin addDragEvents fonksiyonun bunu handle ile yapıyor)
   addDragEvents(node, dragHandle);
+
   return node;
 }
 
@@ -525,6 +572,90 @@ onSnapshot(
     alert("Firestore veri çekme hatası! (Muhtemelen index/rules). Konsolu kontrol et.");
   }
 );
+
+/* ---------- Inline Note Editor (Edit mode only) ---------- */
+let noteEditorEl = null;
+
+function ensureNoteEditor() {
+  if (noteEditorEl) return;
+
+  noteEditorEl = document.createElement("div");
+  noteEditorEl.className = "note-editor-backdrop";
+  noteEditorEl.style.display = "none";
+  noteEditorEl.innerHTML = `
+    <div class="note-editor" role="dialog" aria-modal="true" aria-label="Not düzenle">
+      <div class="note-editor__head">
+        <div class="note-editor__title">Not Düzenle</div>
+        <button class="icon-btn note-editor__close" type="button" aria-label="Kapat">×</button>
+      </div>
+
+      <div class="note-editor__body">
+        <textarea class="note-editor__ta" rows="4" placeholder="Notunu yaz..."></textarea>
+        <div class="note-editor__hint">Sadece düzenleme modunda değiştirilebilir.</div>
+      </div>
+
+      <div class="note-editor__foot">
+        <button class="btn btn--ghost note-editor__cancel" type="button">Vazgeç</button>
+        <button class="btn btn--primary note-editor__save" type="button">Kaydet</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(noteEditorEl);
+
+  // close handlers
+  noteEditorEl.addEventListener("click", (e) => {
+    if (e.target === noteEditorEl) hideNoteEditor();
+  });
+
+  noteEditorEl.querySelector(".note-editor__close").addEventListener("click", hideNoteEditor);
+  noteEditorEl.querySelector(".note-editor__cancel").addEventListener("click", hideNoteEditor);
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && noteEditorEl.style.display !== "none") hideNoteEditor();
+  });
+}
+
+function showNoteEditor({ docId, currentText }) {
+  ensureNoteEditor();
+  noteEditorEl.style.display = "grid";
+  document.body.style.overflow = "hidden";
+
+  noteEditorEl.dataset.docId = docId;
+
+  const ta = noteEditorEl.querySelector(".note-editor__ta");
+  ta.value = currentText || "";
+  setTimeout(() => ta.focus(), 0);
+
+  const saveBtn = noteEditorEl.querySelector(".note-editor__save");
+  saveBtn.disabled = false;
+  saveBtn.textContent = "Kaydet";
+
+  saveBtn.onclick = async () => {
+    if (mode !== "edit") return;
+
+    const newText = safeText(ta.value, 220); // aynı limit
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Kaydediliyor...";
+
+    try {
+      await updateDoc(doc(db, "channels", docId), { desc: newText });
+      hideNoteEditor();
+    } catch (err) {
+      console.error(err);
+      alert("Not kaydedilemedi.");
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Kaydet";
+    }
+  };
+}
+
+function hideNoteEditor() {
+  if (!noteEditorEl) return;
+  noteEditorEl.style.display = "none";
+  document.body.style.overflow = "";
+  noteEditorEl.dataset.docId = "";
+}
 
 /* ---------- Init defaults ---------- */
 setMode("view");
